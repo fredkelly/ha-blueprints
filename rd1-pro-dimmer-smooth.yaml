@@ -57,4 +57,38 @@ trigger:
     device_id: !input rd1_device
     domain: mqtt
     type: action
-    su
+    subtype: started_rotating_left
+    id: rotate_left
+  - platform: device
+    device_id: !input rd1_device
+    domain: mqtt
+    type: action
+    subtype: rotating_left
+    id: rotate_left
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: toggle_lights
+        sequence:
+          - service: light.toggle
+            target: !input target_lights
+      - conditions:
+          - condition: trigger
+            id: rotate_right
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: !input brightness_step
+              transition: !input transition_time
+      - conditions:
+          - condition: trigger
+            id: rotate_left
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: "{{ -1 * (brightness_step|int) }}"
+              transition: !input transition_time
