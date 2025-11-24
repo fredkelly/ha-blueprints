@@ -1,60 +1,127 @@
 blueprint:
-  name: RD1-Pro Smart Bulb Brightness & On/Off (Zigbee2MQTT)
-  description: Control brightness and on/off only with Candeo RD1-Pro rotary dimmer
+  name: Candeo C-ZB-RD1P (REM or DPM mode) - Simple On/Off & Brightness Control in zigbee2mqtt
+  description: >
+    **Simple Smart Bulb control for C-ZB-RD1P (Remote Mode or Dual Purpose Mode) using zigbee2mqtt**
+
+    Use a Candeo RD1P in either REM mode or DPM mode to control your smart bulbs - on/off state and brightness only.
+
+
+    **Features:**
+
+    - **Single press**: Toggles target lights on/off
+
+    - **Rotary control**: Adjusts light brightness up or down
+
+
+    ⚡ **Simple features:**
+
+    - 🏠 Works with individual lights, groups, or areas
+
+    - 🔧 Customizable brightness step size for precise control
+
+    - ⚙️ No mode helper required - just brightness control
+
+
+    **How It Works:**
+
+    - **Single Press**: Toggles the chosen lights on/off  
+
+    - **Rotate Knob**: Adjusts brightness up (clockwise) or down (counter-clockwise)
+
+
+    **Requirements:**
+
+    - C-ZB-RD1P device must be in Remote Mode or Dual Purpose Mode
+
+    - Compatible smart lights with brightness support
+
+
+    **Version**: 1.0 (Simplified)
+
+    **Compatible Devices**: Candeo C-ZB-RD1P (Remote Mode or Dual Purpose Mode)
+
   domain: automation
+  homeassistant:
+    min_version: 2024.6.0
   input:
-    remote_device:
-      name: RD1-Pro Remote Device
-      description: The RD1-Pro in Remote Mode
-      selector:
-        device:
-          filter:
-            - model_id: C-ZB-RD1P-REM
-            - model_id: C-ZB-RD1P-DPM
-    target_lights:
-      name: Target Lights
-      description: Lights or light groups to control
-      selector:
-        target:
-          entity:
-            domain: light
-    brightness_step:
-      name: Brightness Step (%)
-      description: Brightness change per rotation step
-      default: 3
-      selector:
-        number:
-          min: 1
-          max: 50
-          unit_of_measurement: "%"
+    device_section:
+      name: Device & Target Selection
+      icon: mdi:devices
+      description: Select your RD1P device and target lights
+      input:
+        remote_device:
+          name: C-ZB-RD1P Remote Device
+          description: The C-ZB-RD1P device in remote mode or dual purpose mode.
+          selector:
+            device:
+              filter:
+                - model_id: C-ZB-RD1P-REM
+                - model_id: C-ZB-RD1P-DPM
+
+        target_lights:
+          name: Target Lights
+          description: Light, light group, or area to control with the rotary remote
+          selector:
+            target:
+              entity:
+                domain: light
+
+    control_section:
+      name: Control Settings
+      icon: mdi:tune
+      description: Configure how much each rotation step changes your lights
+      input:
+        brightness_step:
+          name: Brightness Step
+          description: How much to change brightness per rotation step (1-50%)
+          default: 10
+          selector:
+            number:
+              min: 1
+              max: 50
+              unit_of_measurement: "%"
+
+mode: single
+max_exceeded: silent
+
+variables:
+  target_lights: !input target_lights
+  brightness_step: !input brightness_step
 
 triggers:
-  # Single press = toggle
-  - device_id: !input remote_device
+  # Single Press - Toggle
+  - trigger: device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: pressed
     id: toggle_lights
 
-  # Rotation right = increase brightness
-  - device_id: !input remote_device
+  # Rotation Actions - Right (increase brightness)
+  - trigger: device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: started_rotating_right
     id: rotate_right
-  - device_id: !input remote_device
+
+  - trigger: device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: rotating_right
     id: rotate_right
 
-  # Rotation left = decrease brightness
-  - device_id: !input remote_device
+  # Rotation Actions - Left (decrease brightness)
+  - trigger: device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: started_rotating_left
     id: rotate_left
-  - device_id: !input remote_device
+
+  - trigger: device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: rotating_left
@@ -62,30 +129,30 @@ triggers:
 
 action:
   - choose:
-      # Toggle lights
+      # Toggle Lights
       - conditions:
           - condition: trigger
             id: toggle_lights
         sequence:
-          - service: light.toggle
+          - action: light.toggle
             target: "{{ target_lights }}"
 
-      # Rotate right = increase brightness
+      # Rotate Right - Increase Brightness
       - conditions:
           - condition: trigger
             id: rotate_right
         sequence:
-          - service: light.turn_on
+          - action: light.turn_on
             target: "{{ target_lights }}"
             data:
               brightness_step_pct: "{{ brightness_step }}"
 
-      # Rotate left = decrease brightness
+      # Rotate Left - Decrease Brightness
       - conditions:
           - condition: trigger
             id: rotate_left
         sequence:
-          - service: light.turn_on
+          - action: light.turn_on
             target: "{{ target_lights }}"
             data:
-              brightness_step_pct: -{{ brightness_step }}
+              brightness_step_pct: "{{ -brightness_step }}"
