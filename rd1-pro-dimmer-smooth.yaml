@@ -1,16 +1,15 @@
 blueprint:
-  name: RD1-Pro Smart Bulb Brightness & On/Off with Smooth Transition (Zigbee2MQTT)
-  description: Control brightness and on/off only with Candeo RD1-Pro rotary dimmer, with smooth fading
+  name: RD1-Pro Brightness & On/Off Control (Zigbee2MQTT)
+  description: Control brightness and toggle on/off using RD1-Pro rotary dimmer, selecting the switch device directly
   domain: automation
   input:
-    remote_device:
-      name: RD1-Pro Remote Device
-      description: The RD1-Pro in Remote Mode
+    rd1_device:
+      name: RD1-Pro Device
+      description: Select the RD1-Pro device in Home Assistant (Zigbee2MQTT)
       selector:
         device:
           filter:
-            - model_id: C-ZB-RD1P-REM
-            - model_id: C-ZB-RD1P-DPM
+            - integration: zigbee2mqtt
     target_lights:
       name: Target Lights
       description: Lights or light groups to control
@@ -20,7 +19,6 @@ blueprint:
             domain: light
     brightness_step:
       name: Brightness Step (%)
-      description: Brightness change per rotation step
       default: 3
       selector:
         number:
@@ -29,7 +27,6 @@ blueprint:
           unit_of_measurement: "%"
     transition_time:
       name: Transition Time (seconds)
-      description: Fade time for brightness changes
       default: 0.2
       selector:
         number:
@@ -37,66 +34,27 @@ blueprint:
           max: 1
           step: 0.05
 
-triggers:
-  # Single press = toggle
-  - device_id: !input remote_device
+trigger:
+  - platform: device
+    device_id: !input rd1_device
     domain: mqtt
     type: action
     subtype: pressed
     id: toggle_lights
-
-  # Rotation right = increase brightness
-  - device_id: !input remote_device
+  - platform: device
+    device_id: !input rd1_device
     domain: mqtt
     type: action
     subtype: started_rotating_right
     id: rotate_right
-  - device_id: !input remote_device
+  - platform: device
+    device_id: !input rd1_device
     domain: mqtt
     type: action
     subtype: rotating_right
     id: rotate_right
-
-  # Rotation left = decrease brightness
-  - device_id: !input remote_device
+  - platform: device
+    device_id: !input rd1_device
     domain: mqtt
     type: action
-    subtype: started_rotating_left
-    id: rotate_left
-  - device_id: !input remote_device
-    domain: mqtt
-    type: action
-    subtype: rotating_left
-    id: rotate_left
-
-action:
-  - choose:
-      # Toggle lights
-      - conditions:
-          - condition: trigger
-            id: toggle_lights
-        sequence:
-          - service: light.toggle
-            target: "{{ target_lights }}"
-
-      # Rotate right = increase brightness
-      - conditions:
-          - condition: trigger
-            id: rotate_right
-        sequence:
-          - service: light.turn_on
-            target: "{{ target_lights }}"
-            data:
-              brightness_step_pct: "{{ brightness_step }}"
-              transition: !input transition_time
-
-      # Rotate left = decrease brightness
-      - conditions:
-          - condition: trigger
-            id: rotate_left
-        sequence:
-          - service: light.turn_on
-            target: "{{ target_lights }}"
-            data:
-              brightness_step_pct: -{{ brightness_step }}
-              transition: !input transition_time
+    su
