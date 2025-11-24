@@ -1,55 +1,102 @@
 blueprint:
-  name: RD1-Pro Smooth Dimmer Control
-  description: Smoothly control smart bulbs using Candeo RD1-Pro rotary dimmer
+  name: RD1-Pro Smart Bulb Brightness & On/Off with Smooth Transition (Zigbee2MQTT)
+  description: Control brightness and on/off only with Candeo RD1-Pro rotary dimmer, with smooth fading
   domain: automation
   input:
-    rd1_device:
-      name: RD1-Pro Device
-      description: The RD1-Pro device sending rotation events
+    remote_device:
+      name: RD1-Pro Remote Device
+      description: The RD1-Pro in Remote Mode
       selector:
-        entity:
-          domain: sensor
+        device:
+          filter:
+            - model_id: C-ZB-RD1P-REM
+            - model_id: C-ZB-RD1P-DPM
     target_lights:
       name: Target Lights
-      description: One or more lights to control
+      description: Lights or light groups to control
       selector:
         target:
           entity:
             domain: light
-    step_size:
-      name: Brightness Step Size
-      description: Percentage change per event
-      default: 2
+    brightness_step:
+      name: Brightness Step (%)
+      description: Brightness change per rotation step
+      default: 3
       selector:
         number:
           min: 1
-          max: 10
-          unit_of_measurement: '%'
+          max: 50
+          unit_of_measurement: "%"
+    transition_time:
+      name: Transition Time (seconds)
+      description: Fade time for brightness changes
+      default: 0.2
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.05
 
-trigger:
-  - platform: event
-    event_type: zha_event   # Replace with your event type if using Zigbee2MQTT MQTT events
-    event_data:
-      device_ieee: !input rd1_device
+triggers:
+  # Single press = toggle
+  - device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: pressed
+    id: toggle_lights
+
+  # Rotation right = increase brightness
+  - device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: started_rotating_right
+    id: rotate_right
+  - device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: rotating_right
+    id: rotate_right
+
+  # Rotation left = decrease brightness
+  - device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: started_rotating_left
+    id: rotate_left
+  - device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: rotating_left
+    id: rotate_left
 
 action:
   - choose:
+      # Toggle lights
       - conditions:
-          - "{{ trigger.event.data.command in ['move', 'step'] and trigger.event.data.args[0] == 'up' }}"
-        sequence:
-          - service: light.turn_on
-            target: !input target_lights
-            data:
-              brightness_step_pct: !input step_size
-      - conditions:
-          - "{{ trigger.event.data.command in ['move', 'step'] and trigger.event.data.args[0] == 'down' }}"
-        sequence:
-          - service: light.turn_on
-            target: !input target_lights
-            data:
-              brightness_step_pct: -{{ step_size }}
-      - conditions:
-          - "{{ trigger.event.data.command == 'toggle' }}"
+          - condition: trigger
+            id: toggle_lights
         sequence:
           - service: light.toggle
-            target: !input target_lights
+            target: "{{ target_lights }}"
+
+      # Rotate right = increase brightness
+      - conditions:
+          - condition: trigger
+            id: rotate_right
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_lights }}"
+            data:
+              brightness_step_pct: "{{ brightness_step }}"
+              transition: !input transition_time
+
+      # Rotate left = decrease brightness
+      - conditions:
+          - condition: trigger
+            id: rotate_left
+        sequence:
+          - service: light.turn_on
+            target: "{{ target_lights }}"
+            data:
+              brightness_step_pct: -{{ brightness_step }}
+              transition: !input transition_time
