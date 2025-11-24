@@ -1,0 +1,55 @@
+blueprint:
+  name: RD1-Pro Smart Dimmer Control
+  description: Control smart bulbs using Candeo RD1-Pro in Remote Mode via Zigbee2MQTT
+  domain: automation
+  input:
+    rd1_device:
+      name: RD1-Pro Device
+      description: The RD1-Pro remote device in Zigbee2MQTT
+      selector:
+        entity:
+          domain: sensor
+    target_lights:
+      name: Target Lights
+      description: One or more lights to control
+      selector:
+        target:
+          entity:
+            domain: light
+    dim_step:
+      name: Dim Step
+      description: Percentage to increase/decrease per knob step
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          unit_of_measurement: '%'
+
+trigger:
+  - platform: event
+    event_type: zha_event   # If using ZHA, change to `zha_event`; for Zigbee2MQTT, this may be `mqtt` or `zha_event` depending on your setup
+    event_data:
+      device_ieee: !input rd1_device
+
+action:
+  - choose:
+      - conditions:
+          - "{{ trigger.event.data.command == 'step' and trigger.event.data.args[0] == 'up' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: !input dim_step
+      - conditions:
+          - "{{ trigger.event.data.command == 'step' and trigger.event.data.args[0] == 'down' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: -{{ dim_step }}
+      - conditions:
+          - "{{ trigger.event.data.command == 'toggle' }}"
+        sequence:
+          - service: light.toggle
+            target: !input target_lights

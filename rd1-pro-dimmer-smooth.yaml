@@ -1,0 +1,55 @@
+blueprint:
+  name: RD1-Pro Smooth Dimmer Control
+  description: Smoothly control smart bulbs using Candeo RD1-Pro rotary dimmer
+  domain: automation
+  input:
+    rd1_device:
+      name: RD1-Pro Device
+      description: The RD1-Pro device sending rotation events
+      selector:
+        entity:
+          domain: sensor
+    target_lights:
+      name: Target Lights
+      description: One or more lights to control
+      selector:
+        target:
+          entity:
+            domain: light
+    step_size:
+      name: Brightness Step Size
+      description: Percentage change per event
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 10
+          unit_of_measurement: '%'
+
+trigger:
+  - platform: event
+    event_type: zha_event   # Replace with your event type if using Zigbee2MQTT MQTT events
+    event_data:
+      device_ieee: !input rd1_device
+
+action:
+  - choose:
+      - conditions:
+          - "{{ trigger.event.data.command in ['move', 'step'] and trigger.event.data.args[0] == 'up' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: !input step_size
+      - conditions:
+          - "{{ trigger.event.data.command in ['move', 'step'] and trigger.event.data.args[0] == 'down' }}"
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: -{{ step_size }}
+      - conditions:
+          - "{{ trigger.event.data.command == 'toggle' }}"
+        sequence:
+          - service: light.toggle
+            target: !input target_lights
