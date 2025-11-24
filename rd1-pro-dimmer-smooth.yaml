@@ -3,14 +3,14 @@ blueprint:
   description: Control brightness and toggle on/off using RD1-Pro rotary dimmer, selecting the switch device directly
   domain: automation
   input:
-    rd1_device:
+    remote_device:
       name: RD1-Pro Device
       description: Select the RD1-Pro device in Home Assistant (Zigbee2MQTT)
       selector:
         device:
           filter:
-            model_id: C-ZB-RD1P-REM
-            model_id: C-ZB-RD1P-DPM
+            - model_id: C-ZB-RD1P-REM
+            - model_id: C-ZB-RD1P-DPM
 
     target_lights:
       name: Target Lights
@@ -38,31 +38,31 @@ blueprint:
 
 trigger:
   - platform: device
-    device_id: !input rd1_device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: pressed
     id: toggle_lights
   - platform: device
-    device_id: !input rd1_device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: started_rotating_right
     id: rotate_right
   - platform: device
-    device_id: !input rd1_device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: rotating_right
     id: rotate_right
   - platform: device
-    device_id: !input rd1_device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: started_rotating_left
     id: rotate_left
   - platform: device
-    device_id: !input rd1_device
+    device_id: !input remote_device
     domain: mqtt
     type: action
     subtype: rotating_left
