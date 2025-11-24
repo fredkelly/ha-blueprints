@@ -144,8 +144,12 @@ action:
         sequence:
           - action: light.turn_on
             target: "{{ target_lights }}"
-            data:
-              brightness_step_pct: "{{ brightness_step }}"
+	data:
+	  brightness: >
+	    {% set current = state_attr('light.kitchen_undercabinet_lights',
+	    'brightness') | default(255) %} {% set step = (255 * 0.02) | round(0) %} {%
+	    set new = current + step %} {{ [new, 1] | max }}
+	  transition: 1
 
       # Rotate Left - Decrease Brightness
       - conditions:
