@@ -68,9 +68,11 @@ trigger:
     subtype: rotating_left
     id: rotate_left
 
+variables:
+  negative_step: "{{ -1 * (!input brightness_step | int) }}"
+
 action:
   - choose:
-      # Toggle lights
       - conditions:
           - condition: trigger
             id: toggle_lights
@@ -78,7 +80,6 @@ action:
           - service: light.toggle
             target: !input target_lights
 
-      # Rotate right = increase brightness
       - conditions:
           - condition: trigger
             id: rotate_right
@@ -89,7 +90,6 @@ action:
               brightness_step_pct: !input brightness_step
               transition: !input transition_time
 
-      # Rotate left = decrease brightness
       - conditions:
           - condition: trigger
             id: rotate_left
@@ -97,6 +97,6 @@ action:
           - service: light.turn_on
             target: !input target_lights
             data:
-              brightness_step_pct: "{{ -1 * (!input brightness_step | int) }}"
+              brightness_step_pct: "{{ negative_step }}"
               transition: !input transition_time
 
