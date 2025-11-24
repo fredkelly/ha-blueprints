@@ -9,7 +9,9 @@ blueprint:
       selector:
         device:
           filter:
-            - integration: zigbee2mqtt
+            model_id: C-ZB-RD1P-REM
+            model_id: C-ZB-RD1P-DPM
+
     target_lights:
       name: Target Lights
       description: Lights or light groups to control
