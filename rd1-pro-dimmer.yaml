@@ -1,6 +1,6 @@
 blueprint:
   name: RD1-Pro simple toggle + dim (zigbee2mqtt)
-  description: Simple control: single press = toggle light, rotate = adjust brightness
+  description: "Simple control: single press = toggle light; rotate = adjust brightness"
   domain: automation
 
   input:
@@ -12,11 +12,13 @@ blueprint:
             model_id:
               - C-ZB-RD1P-REM
               - C-ZB-RD1P-DPM
+
     light_target:
-      name: Light to control
+      name: Light or Zigbee2MQTT Group to control
       selector:
         entity:
           domain: light
+
     brightness_step_pct:
       name: Brightness Step Percentage
       selector:
@@ -25,6 +27,7 @@ blueprint:
           max: 100
           unit_of_measurement: "%"
       default: 5
+
     negative_brightness:
       name: Negative Brightness Step
       selector:
@@ -34,57 +37,60 @@ blueprint:
           unit_of_measurement: "%"
       default: -5
 
-  mode: single
+mode: single
 
-  triggers:
-    - platform: device
-      device_id: !input remote_device
-      domain: mqtt
-      type: action
-      subtype: pressed
-      id: pressed
-    - platform: device
-      device_id: !input remote_device
-      domain: mqtt
-      type: action
-      subtype: started_rotating_right
-      id: started_rotating_right
-    - platform: device
-      device_id: !input remote_device
-      domain: mqtt
-      type: action
-      subtype: started_rotating_left
-      id: started_rotating_left
+trigger:
+  - platform: device
+    device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: pressed
+    id: pressed
 
-  action:
-    - choose:
-        # Single press = toggle
-        - conditions:
-            - condition: trigger_id
-              id: pressed
-          sequence:
-            - service: light.toggle
-              target:
-                entity_id: !input light_target
+  - platform: device
+    device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: started_rotating_right
+    id: rotate_right
 
-        # Rotate right = brighten
-        - conditions:
-            - condition: trigger_id
-              id: started_rotating_right
-          sequence:
-            - service: light.turn_on
-              target:
-                entity_id: !input light_target
-              data:
-                brightness_step_pct: !input brightness_step_pct
+  - platform: device
+    device_id: !input remote_device
+    domain: mqtt
+    type: action
+    subtype: started_rotating_left
+    id: rotate_left
 
-        # Rotate left = dim
-        - conditions:
-            - condition: trigger_id
-              id: started_rotating_left
-          sequence:
-            - service: light.turn_on
-              target:
-                entity_id: !input light_target
-              data:
-                brightness_step_pct: !input negative_brightness
+action:
+  - choose:
+
+      # Toggle light/group on press
+      - conditions:
+          - condition: trigger
+            id: pressed
+        sequence:
+          - service: light.toggle
+            target:
+              entity_id: !input light_target
+
+      # Brighten on rotate right
+      - conditions:
+          - condition: trigger
+            id: rotate_right
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_target
+            data:
+              brightness_step_pct: !input brightness_step_pct
+
+      # Dim on rotate left
+      - conditions:
+          - condition: trigger
+            id: rotate_left
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_target
+            data:
+              brightness_step_pct: !input negative_brightness
