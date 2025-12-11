@@ -101,18 +101,18 @@ action:
       - conditions:
           - condition: trigger
             id: rotate_right
-	sequence:
-	  - action: light.turn_on
-	    target: "{{ target_lights }}"
-	    data:
-	      brightness_step_pct: "{{ brightness_step }}"
+            sequence:
+              - action: light.turn_on
+                target: "{{ target_lights }}"
+                data:
+                  brightness_step_pct: "{{ brightness_step }}"
 
       # Rotate Left
       - conditions:
           - condition: trigger
             id: rotate_left
-	sequence:
-	  - action: light.turn_on
-	    target: "{{ target_lights }}"
-	    data:
-	      brightness_step_pct: "{{ -brightness_step }}"
+            sequence:
+              - action: light.turn_on
+                target: "{{ target_lights }}"
+                data:
+                  brightness_step_pct: "{{ -brightness_step }}"
