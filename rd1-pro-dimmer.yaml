@@ -1,0 +1,102 @@
+blueprint:
+  name: RD1-Pro Light Control (Brightness Only)
+  description: Control a smart light's on/off state and brightness using the Candeo RD1-Pro dimmer switch (Zigbee2MQTT), without changing color or color temperature.
+  domain: automation
+  input:
+    remote_device:
+      name: RD1-Pro Remote Device
+      description: The Candeo RD1-Pro switch device (Zigbee2MQTT).
+      selector:
+        device:
+          integration: mqtt
+          manufacturer: Candeo
+          model: C-ZB-RD1P-REM
+          multiple: false
+
+    target_lights:
+      name: Target Lights
+      description: The light or light group to control.
+      selector:
+        target:
+          entity:
+            domain: light
+            multiple: true
+
+    brightness_step_pct:
+      name: Brightness step (%)
+      description: The percentage amount to adjust brightness with each rotation event (e.g., 5 for 5%).
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          unit_of_measurement: '%'
+
+mode: parallel
+max_exceeded: silent
+
+trigger:
+  # Trigger for the On/Off Toggle
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: pressed
+    id: 'toggle'
+
+  # Triggers for Brightness Increase (Rotation Right)
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: started_rotating_right
+    id: 'rotate_right'
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: rotating_right
+    id: 'rotate_right'
+
+  # Triggers for Brightness Decrease (Rotation Left)
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: started_rotating_left
+    id: 'rotate_left'
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: rotating_left
+    id: 'rotate_left'
+
+action:
+  - choose:
+      # Action: On/Off Toggle (Single Press)
+      - conditions:
+          - '{{ trigger.id == "toggle" }}'
+        sequence:
+          - service: light.toggle
+            target: !input target_lights
+
+      # Action: Brightness Increase (Rotate Right)
+      - conditions:
+          - '{{ trigger.id == "rotate_right" }}'
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: '{{ input_brightness_step_pct }}'
+
+      # Action: Brightness Decrease (Rotate Left)
+      - conditions:
+          - '{{ trigger.id == "rotate_left" }}'
+        sequence:
+          - service: light.turn_on
+            target: !input target_lights
+            data:
+              brightness_step_pct: '{{ -1 * input_brightness_step_pct }}'
+
+    default: []
