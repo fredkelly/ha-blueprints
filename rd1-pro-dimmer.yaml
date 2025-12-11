@@ -1,102 +1,118 @@
 blueprint:
-  name: RD1-Pro Light Control (Brightness Only)
-  description: Control a smart light's on/off state and brightness using the Candeo RD1-Pro dimmer switch (Zigbee2MQTT), without changing color or color temperature.
+  name: Candeo C-ZB-RD1P (REM or DPM mode) - on/off and dimmer
+  description: >
+
   domain: automation
+  homeassistant:
+    min_version: 2024.6.0
   input:
-    remote_device:
-      name: RD1-Pro Remote Device
-      description: The Candeo RD1-Pro switch device (Zigbee2MQTT).
-      selector:
-        device:
-          integration: mqtt
-          manufacturer: Candeo
-          model: C-ZB-RD1P-REM
-          multiple: false
+    device_section:
+      name: Device & Target Selection
+      icon: mdi:devices
+      description: Select your RD1P device, target lights, and mode helper
+      input:
+        remote_device:
+          name: C-ZB-RD1P Remote Device
+          description: The C-ZB-RD1P device in remote mode or dual purpose mode.
+          selector:
+            device:
+              filter:
+                - model_id: C-ZB-RD1P-REM
+                - model_id: C-ZB-RD1P-DPM
 
-    target_lights:
-      name: Target Lights
-      description: The light or light group to control.
-      selector:
-        target:
-          entity:
-            domain: light
-            multiple: true
+        target_lights:
+          name: Target Lights
+          description: Light, light group, or area to control with the rotary remote
+          selector:
+            target:
+              entity:
+                domain: light
 
-    brightness_step_pct:
-      name: Brightness step (%)
-      description: The percentage amount to adjust brightness with each rotation event (e.g., 5 for 5%).
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 20
-          unit_of_measurement: '%'
+    control_section:
+      name: Control Settings
+      icon: mdi:tune
+      description: Configure how much each rotation step changes your lights
+      input:
+        brightness_step:
+          name: Brightness Step
+          description: How much to change brightness per rotation step (1-50%)
+          default: 10
+          selector:
+            number:
+              min: 1
+              max: 50
+              unit_of_measurement: "%"
 
-mode: parallel
+mode: single
 max_exceeded: silent
 
-trigger:
-  # Trigger for the On/Off Toggle
-  - platform: device
-    domain: mqtt
+variables:
+  target_lights: !input target_lights
+
+triggers:
+  # Single Press - Toggle
+  - trigger: device
     device_id: !input remote_device
+    domain: mqtt
     type: action
     subtype: pressed
-    id: 'toggle'
+    id: toggle_lights
 
-  # Triggers for Brightness Increase (Rotation Right)
-  - platform: device
-    domain: mqtt
+  # Rotation Actions
+  - trigger: device
     device_id: !input remote_device
+    domain: mqtt
     type: action
     subtype: started_rotating_right
-    id: 'rotate_right'
-  - platform: device
-    domain: mqtt
+    id: rotate_right
+
+  - trigger: device
     device_id: !input remote_device
+    domain: mqtt
     type: action
     subtype: rotating_right
-    id: 'rotate_right'
+    id: rotate_right
 
-  # Triggers for Brightness Decrease (Rotation Left)
-  - platform: device
-    domain: mqtt
+  - trigger: device
     device_id: !input remote_device
+    domain: mqtt
     type: action
     subtype: started_rotating_left
-    id: 'rotate_left'
-  - platform: device
-    domain: mqtt
+    id: rotate_left
+
+  - trigger: device
     device_id: !input remote_device
+    domain: mqtt
     type: action
     subtype: rotating_left
-    id: 'rotate_left'
+    id: rotate_left
 
 action:
   - choose:
-      # Action: On/Off Toggle (Single Press)
+      # Toggle Lights
       - conditions:
-          - '{{ trigger.id == "toggle" }}'
+          - condition: trigger
+            id: toggle_lights
         sequence:
-          - service: light.toggle
-            target: !input target_lights
+          - action: light.toggle
+            target: "{{ target_lights }}"
 
-      # Action: Brightness Increase (Rotate Right)
+      # Rotate Right
       - conditions:
-          - '{{ trigger.id == "rotate_right" }}'
-        sequence:
-          - service: light.turn_on
-            target: !input target_lights
-            data:
-              brightness_step_pct: '{{ input_brightness_step_pct }}'
+          - condition: trigger
+            id: rotate_right
+	sequence:
+	  - action: light.turn_on
+	    target: "{{ target_lights }}"
+	    data:
+	      brightness_step_pct: "{{ brightness_step }}"
 
-      # Action: Brightness Decrease (Rotate Left)
+      # Rotate Left
       - conditions:
-          - '{{ trigger.id == "rotate_left" }}'
-        sequence:
-          - service: light.turn_on
-            target: !input target_lights
-            data:
-              brightness_step_pct: '{{ -1 * input_brightness_step_pct }}'
-
-    default: []
+          - condition: trigger
+            id: rotate_left
+	sequence:
+	  - action: light.turn_on
+	    target: "{{ target_lights }}"
+	    data:
+	      brightness_step_pct: "{{ -brightness_step }}"
