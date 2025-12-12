@@ -88,13 +88,6 @@ triggers:
     subtype: rotating_left
     id: rotate_left
 
-  - trigger: device
-    device_id: !input remote_device
-    domain: mqtt
-    type: action
-    subtype: stopped_rotating
-    id: rotate_stop
-
 action:
   - choose:
       # Toggle Lights
@@ -113,7 +106,7 @@ action:
           - action: light.turn_on
             target: "{{ target_lights }}"
             data:
-              brightness_move: "{{ brightness_step }}"
+              brightness_step_pct: "{{ brightness_step }}"
 
       # Rotate Left
       - conditions:
@@ -123,14 +116,5 @@ action:
           - action: light.turn_on
             target: "{{ target_lights }}"
             data:
-              brightness_move: "{{ -brightness_step }}"
-     
-     # Stop Rotation
-      - conditions:
-          - condition: trigger
-            id: rotate_stop
-        sequence:
-          - action: light.turn_on
-            target: "{{ target_lights }}"
-            data:
-              brightness_move: "stop"
+              brightness_step_pct: "{{ -brightness_step }}"
+
