@@ -133,4 +133,4 @@ action:
           - action: light.turn_on
             target: "{{ target_lights }}"
             data:
-              brightness_stop: true
+              brightness_move: "stop"
